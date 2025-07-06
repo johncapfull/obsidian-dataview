@@ -1,7 +1,7 @@
 /** The general, externally accessible plugin API (available at `app.plugins.plugins.dataview.api` or as global `DataviewAPI`). */
 
 import { App, Component, MarkdownPostProcessorContext, TFile } from "obsidian";
-import { FullIndex } from "data-index/index";
+import { FullIndex } from "../data-index";
 import { matchingSourcePaths } from "data-index/resolver";
 import { Sources } from "data-index/source";
 import { DataObject, Grouping, Groupings, Link, Literal, Values, Widgets } from "data-model/value";
@@ -467,6 +467,42 @@ export class DataviewApi {
         component.addChild(renderer);
     }
 
+    public async executeSvg(
+        code: string,
+        container: HTMLElement,
+        component: Component | MarkdownPostProcessorContext,
+        filePath: string
+    ) {
+        /*
+        let codeEl = container.createEl("code", { cls: ["dataview"] });
+        codeEl.classList.add("language-svg");
+        codeEl.appendText("preved");
+        */
+
+        try {
+            let parser = new DOMParser();
+            let document = parser.parseFromString(code, "image/svg+xml");
+
+            const parserError = document.querySelector("parsererror");
+            if (parserError) {
+                let description = parserError.getElementsByTagName("div")[0].textContent;
+                throw Error(`${description}`);
+            }
+
+            const collection = Array.from(document.documentElement.children);
+
+            let svg = container.createSvg("svg");
+            for (const element of collection) {
+                svg.appendChild(element); // element.cloneNode(true)
+            }
+        } catch (e) {
+            // this.containerEl.innerHTML = "";
+            renderErrorPre(container, "Parsing Error: " + e.message);
+        }
+
+        //component.addChild(renderer);
+    }
+
     /** Render a dataview list of the given values. */
     public async list(
         values: any[] | DataArray<any> | undefined,
@@ -475,7 +511,7 @@ export class DataviewApi {
         filePath: string
     ) {
         if (!values) return;
-        if (values !== undefined && values !== null && !Array.isArray(values) && !DataArray.isDataArray(values))
+        if (!Array.isArray(values) && !DataArray.isDataArray(values))
             values = Array.from(values);
 
         // Append a child div, since React will keep re-rendering otherwise.

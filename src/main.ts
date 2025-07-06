@@ -74,6 +74,10 @@ export default class DataviewPlugin extends Plugin {
             async (source: string, el, ctx) => this.dataviewjs(source, el, ctx, ctx.sourcePath)
         );
 
+        // SVG codeblocks
+        this.registerPriorityCodeblockPostProcessor("svg", -100,
+            async (source: string, el, ctx) => this.dataviewsvg(source, el, ctx, ctx.sourcePath));
+
         // Dataview inline queries.
         this.registerPriorityMarkdownPostProcessor(-100, async (el, ctx) => {
             // Allow for turning off inline queries.
@@ -246,6 +250,16 @@ export default class DataviewPlugin extends Plugin {
     ) {
         el.style.overflowX = "auto";
         this.api.executeJs(source, el, component, sourcePath);
+    }
+
+    public async dataviewsvg(
+        source: string,
+        el: HTMLElement,
+        component: Component | MarkdownPostProcessorContext,
+        sourcePath: string
+    ) {
+        el.style.overflowX = "auto";
+        this.api.executeSvg(source, el, component, sourcePath);
     }
 
     /** Render all dataview inline expressions in the given element. */

@@ -1,6 +1,6 @@
 {
-  "id": "dataview",
-  "name": "Dataview",
+  "id": "dataview-dev",
+  "name": "Dataview DEV",
   "version": "0.5.68",
   "minAppVersion": "0.13.11",
   "description": "Complex data views for the data-obsessed.",
