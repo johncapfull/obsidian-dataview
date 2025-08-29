@@ -2,12 +2,15 @@ import {
     App,
     Component,
     debounce,
+    Editor,
+    EditorPosition, FileManager,
+    MarkdownFileInfo,
     MarkdownPostProcessorContext,
-    MarkdownView,
+    MarkdownView, normalizePath,
     Plugin,
     PluginSettingTab,
-    Setting,
-    WorkspaceLeaf,
+    Setting, TFile,
+    WorkspaceLeaf
 } from "obsidian";
 import { renderErrorPre } from "ui/render";
 import { FullIndex } from "data-index/index";
@@ -24,11 +27,41 @@ import { replaceInlineFields } from "ui/views/inline-field";
 import {
     inlineFieldsField,
     replaceInlineFieldsInLivePreview,
-    workspaceLayoutChangeEffect,
+    workspaceLayoutChangeEffect
 } from "./ui/views/inline-field-live-preview";
 import { DataviewInit } from "ui/markdown";
 import { inlinePlugin } from "./ui/lp-render";
 import { Extension } from "@codemirror/state";
+
+// ------
+// Кусок внутренностей для переименования ссылки
+// https://github.com/aleksey-rowan/obsidian-context-aware-move-and-rename/blob/master/src/types.ts#L44
+
+const enum linkTypeEnum {
+    internal = "internal-link",
+    external = "external-link",
+}
+
+type LinkTypes = {
+    [key in linkTypeEnum]: () => void;
+};
+
+interface ClickableToken {
+    type: linkTypeEnum;
+    text: string;
+    start: EditorPosition;
+    end: EditorPosition;
+}
+
+abstract class EditorExtended extends Editor {
+    abstract getClickableTokenAt(position: EditorPosition): ClickableToken | null;
+}
+
+abstract class FileManagerExtended extends FileManager {
+    abstract promptForFileRename(file: TFile): void;
+}
+
+// ------
 
 export default class DataviewPlugin extends Plugin {
     /** Plugin-wide default settings. */
@@ -139,6 +172,17 @@ export default class DataviewPlugin extends Plugin {
                 if (activeView) {
                     (activeView.leaf as WorkspaceLeafRebuild).rebuildView();
                 }
+            },
+        });
+
+        // Очень недостающая команда которая позволяет переименовать
+        // файл под курсором по хоткею блядь
+        // https://forum.obsidian.md/t/keyboard-shortcut-to-rename-links-in-a-note/25213/14
+        this.addCommand({
+            id: "dataview-rename-link",
+            name: "Rename link under cursor",
+            editorCallback: (editor: Editor, ctx: MarkdownView | MarkdownFileInfo) => {
+                this.renameLink(editor as EditorExtended, ctx);
             },
         });
 
@@ -334,6 +378,39 @@ export default class DataviewPlugin extends Plugin {
      */
     public localApi(path: string, component: Component, el: HTMLElement): DataviewInlineApi {
         return new DataviewInlineApi(this.api, component, el, path);
+    }
+
+    // MARK: - Link rename
+
+    private renameLink(editor: EditorExtended, info: MarkdownFileInfo) {
+        const cursorPosition = editor.getCursor();
+        const token = editor.getClickableTokenAt(cursorPosition);
+        if (!token) {
+            return;
+        }
+
+        const linkTypes: LinkTypes = {
+            [linkTypeEnum.external]: () => {
+                // call "edit link" command which just selects the text of the link
+                editor.focus();
+                editor.setSelection(token.start, token.end);
+            },
+            [linkTypeEnum.internal]: () => {
+                // abort if we can't find the link object for some reason
+                const linkPath = normalizePath(token.text).split("#")[0];
+                const path = info.file?.path
+                if (path == null) {
+                    return ;
+                }
+                const file = this.app.metadataCache.getFirstLinkpathDest(linkPath, path);
+                if (!file) {
+                    return;
+                }
+                const fm = this.app.fileManager as FileManagerExtended;
+                fm.promptForFileRename(file);
+            },
+        };
+        linkTypes[token.type]();
     }
 }
 

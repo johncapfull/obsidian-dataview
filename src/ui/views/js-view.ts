@@ -68,7 +68,6 @@ const cmHighlightStyle = HighlightStyle.define([
 ]);
 
 export class DataviewJSRenderer extends DataviewRefreshableRenderer {
-    static PREAMBLE: string = "const dataview = this;const dv = this;";
 
     constructor(public api: DataviewApi, public script: string, public container: HTMLElement, public origin: string) {
         super(container, api.index, api.app, api.settings);
@@ -78,10 +77,8 @@ export class DataviewJSRenderer extends DataviewRefreshableRenderer {
         this.container.innerHTML = "";
         if (!this.settings.enableDataviewJs) {
             this.containerEl.innerHTML = "";
-            renderErrorPre(
-                this.container,
-                "Dataview JS queries are disabled. You can enable them in the Dataview settings."
-            );
+            renderErrorPre(this.container,
+                "Dataview JS queries are disabled. You can enable them in the Dataview settings.");
             return;
         }
 
@@ -90,13 +87,15 @@ export class DataviewJSRenderer extends DataviewRefreshableRenderer {
             let div = this.container.createEl("div");
 
             let code = this.container.createEl("div");
-            //code.innerHTML = previous;
+            code.addClass("HyperMD-codeblock-bg");
+            code.addClass("cm-s-obsidian");
+            code.addClass("dataview-code-view");
+
             // @ts-ignore
             let editor = new EditorView({
                 parent: code,
-                doc: this.script, // "I am focusable but not editable"
+                doc: this.script,
                 extensions: [
-//                  basicSetup,
                   javascript({typescript: true}),
                   syntaxHighlighting(cmHighlightStyle),     // defaultHighlightStyle classHighlighter
                   highlightAllLinesPlugin,
@@ -109,16 +108,36 @@ export class DataviewJSRenderer extends DataviewRefreshableRenderer {
 
             div.appendChild(code);
 
+            let outContainer = this.container.createEl("pre");
+            outContainer.addClass("dataview-console-view");
+            div.appendChild(outContainer);
+
             let resultContainer = this.container.createEl("div");
+            resultContainer.addClass("dataview-result-view");
             div.appendChild(resultContainer);
 
-            await asyncEvalInContext(
-                DataviewJSRenderer.PREAMBLE + this.script,
-                new DataviewInlineApi(this.api, this, resultContainer, this.origin)
-            );
+            //const trace = d.trace.bind(d);
+            //const dataview = this;
+
+            // все в одну линию чтобы номера строк ошибок были
+            const js = "" +
+                `const d = this;` +
+                `const shared = d.shared;` +
+                `["share", "trace", "el", "lerp_from_to", "clamp", "saturate"]` +
+                `.forEach(fn => { globalThis[fn] = d[fn].bind(d); });` +
+                `${this.script}`;
+
+            const api = new DataviewInlineApi(this.api, this, resultContainer, this.origin, outContainer);
+            await asyncEvalInContext(js, api);
         } catch (e) {
             this.containerEl.innerHTML = "";
-            renderErrorPre(this.container, "Evaluation Error: " + e.stack);
+
+            let text = "";
+            Object.entries(this.containerEl).forEach(([key, value]) => {
+                text += `${key}: ${value}`
+              });
+
+            renderErrorPre(this.container, `Evaluation Error: ${e.stack}`);
         }
     }
 }

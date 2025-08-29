@@ -15,6 +15,7 @@ import { DataArray } from "./data-array";
 import { SListItem } from "data-model/serialized/markdown";
 import { EXPRESSION } from "expression/parse";
 import { Result } from "api/result";
+import * as culori from "culori";
 
 /** Asynchronous API calls related to file / system IO. */
 export class DataviewInlineIOApi {
@@ -37,23 +38,16 @@ export class DataviewInlineIOApi {
 }
 
 export class DataviewInlineApi {
-    /**
-     * The raw dataview indices, which track file <-> metadata relations. Use these if the intuitive API does not support
-     * your use case.
-     */
+    /** The raw dataview indices, which track file <-> metadata relations. Use these if the intuitive API does not support your use case. */
     public index: FullIndex;
-
     /** The component that handles the lifetime of this view. Use it if you are adding custom event handlers/components. */
     public component: Component;
-
     /** The path to the current file this script is running in. */
     public currentFilePath: string;
 
-    /**
-     * The container which holds the output of this view. You can directly append fields to this, if you wish, though
-     * the rendering API is likely to be easier for straight-forward purposes.
-     */
+    /** The container which holds the output of this view. You can directly append fields to this, if you wish, though the rendering API is likely to be easier for straight-forward purposes. */
     public container: HTMLElement;
+    public outContainer?: HTMLElement;
 
     /** Directly access the Obsidian app object, such as for reaching out to other plugins. */
     public app: App;
@@ -80,19 +74,28 @@ export class DataviewInlineApi {
     public luxon = Luxon;
 
     /** Dataview functions which can be called from DataviewJS. */
-    public func: Record<string, BoundFunctionImpl>;
+    public utils: Record<string, BoundFunctionImpl>;
 
-    constructor(api: DataviewApi, component: Component, container: HTMLElement, currentFilePath: string) {
+    /** Culori for color manipulations */
+    public culori = culori;
+
+    /** Общий объект чтобы через него шарить функции и значения */
+    public shared: Object;
+
+    constructor(api: DataviewApi, component: Component, container: HTMLElement, currentFilePath: string, outContainer?: HTMLElement) {
         this.index = api.index;
         this.app = api.app;
         this.settings = api.settings;
 
         this.component = component;
         this.container = container;
+        this.outContainer = outContainer;
         this.currentFilePath = currentFilePath;
 
         this.api = api;
         this.io = new DataviewInlineIOApi(this.api.io, this.currentFilePath);
+
+        this.shared = api.shared;
 
         // Set up the evaluation context with variables from the current file.
         let fileMeta = this.index.pages.get(this.currentFilePath)?.serialize(this.index) ?? {};
@@ -100,7 +103,7 @@ export class DataviewInlineApi {
             this: fileMeta,
         });
 
-        this.func = Functions.bindAll(DEFAULT_FUNCTIONS, this.evaluationContext);
+        this.utils = Functions.bindAll(DEFAULT_FUNCTIONS, this.evaluationContext);
     }
 
     /////////////////////////////
@@ -132,11 +135,7 @@ export class DataviewInlineApi {
     ///////////////////////////////
 
     /** Execute a Dataview query, returning the results in programmatic form. */
-    public async query(
-        source: string,
-        originFile?: string,
-        settings?: QueryApiSettings
-    ): Promise<Result<QueryResult, string>> {
+    public async query(source: string, originFile?: string, settings?: QueryApiSettings): Promise<Result<QueryResult, string>> {
         return this.api.query(source, originFile ?? this.currentFilePath, settings);
     }
 
@@ -200,10 +199,7 @@ export class DataviewInlineApi {
     // Utility //
     /////////////
 
-    /**
-     * Convert an input element or array into a Dataview data-array. If the input is already a data array,
-     * it is returned unchanged.
-     */
+    /** Convert an input element or array into a Dataview data-array. If the input is already a data array, it is returned unchanged. */
     public array(raw: any): DataArray<any> {
         return this.api.array(raw);
     }
@@ -269,6 +265,18 @@ export class DataviewInlineApi {
     /** Return true if the two given JavaScript values are equal using Dataview's default comparison rules. */
     public equal(a: any, b: any): boolean {
         return this.compare(a, b) == 0;
+    }
+
+    /////////////////////////
+    // Console Functions   //
+    /////////////////////////
+
+    public trace(text: String) {
+        let out = this.outContainer;
+        if (out) {
+            let previous = out.textContent ?? ""
+            out.textContent = previous + text + "\n";
+        }
     }
 
     /////////////////////////
@@ -383,9 +391,7 @@ export class DataviewInlineApi {
         return this.api.taskList(tasks, groupByFile, this.container, this.component, this.currentFilePath);
     }
 
-    ////////////////////////
-    // Markdown Rendering //
-    ////////////////////////
+    // Markdown Rendering //////////////////////////////////////////////////////////////
 
     /** Render a table directly to markdown, returning the markdown. */
     public markdownTable(
@@ -405,20 +411,40 @@ export class DataviewInlineApi {
     public markdownTaskList(values: Grouping<SListItem>, settings?: Partial<ExportSettings>) {
         return this.api.markdownTaskList(values, settings);
     }
+
+    // Some math and another helper functions от меня конкретно ////////////////////////
+
+    public lerp_from_to(x: number, xfrom: number, xto: number, from: number, to: number) {
+        if (!((xto > xfrom && x >= xfrom && x <= xto) ||
+            (xfrom > xto && x >= xto && x <= xfrom))) {
+            this.trace("ASSERT: lerp");
+            return;
+        }
+        return ((from * (xto - x) + to * (x - xfrom)) / (xto - xfrom));
+    }
+
+    public clamp(x: number, from: number, to: number) {
+        return Math.min(Math.max(x, from), to);
+    }
+
+    public saturate(x: number) {
+        return this.clamp(x, 0.0, 1.0);
+    }
+
+    public share(name: string, v: any) {
+        // @ts-ignore
+        this.shared[name] = v;
+    }
 }
 
-/**
- * Evaluate a script where 'this' for the script is set to the given context. Allows you to define global variables.
- */
+/** Evaluate a script where 'this' for the script is set to the given context. Allows you to define global variables. */
 export function evalInContext(script: string, context: any): any {
     return function () {
         return eval(script);
     }.call(context);
 }
 
-/**
- * Evaluate a script possibly asynchronously, if the script contains `async/await` blocks.
- */
+/** Evaluate a script possibly asynchronously, if the script contains `async/await` blocks. */
 export async function asyncEvalInContext(script: string, context: any): Promise<any> {
     if (script.includes("await")) {
         return evalInContext("(async () => { " + script + " })()", context) as Promise<any>;

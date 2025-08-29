@@ -80,13 +80,16 @@ export class DataviewApi {
     /** IO API which supports asynchronous loading of data directly. */
     public io: DataviewIOApi;
     /** Dataview functions which can be called from DataviewJS. */
-    public func: Record<string, BoundFunctionImpl>;
+    public utils: Record<string, BoundFunctionImpl>;
     /** Value utility functions for comparisons and type-checking. */
     public value = Values;
     /** Widget utility functions for creating built-in widgets. */
     public widget = Widgets;
     /** Re-exporting of luxon for people who can't easily require it. Sorry! */
     public luxon = Luxon;
+
+    /** Глобальный словарь который сохраняет стейт на протяжении жизни плагина, для коммуникации функций */
+    public shared = {};
 
     public constructor(
         public app: App,
@@ -95,7 +98,7 @@ export class DataviewApi {
         private verNum: string
     ) {
         this.evaluationContext = new Context(defaultLinkHandler(index, ""), settings);
-        this.func = Functions.bindAll(DEFAULT_FUNCTIONS, this.evaluationContext);
+        this.utils = Functions.bindAll(DEFAULT_FUNCTIONS, this.evaluationContext);
         this.io = new DataviewIOApi(this);
     }
 
@@ -209,12 +212,12 @@ export class DataviewApi {
 
     /** Attempt to extract a date from a string, link or date. */
     public date(pathlike: string | Link | DateTime): DateTime | null {
-        return this.func.date(pathlike) as DateTime | null;
+        return this.utils.date(pathlike) as DateTime | null;
     }
 
     /** Attempt to extract a duration from a string or duration. */
     public duration(str: string | Duration): Duration | null {
-        return this.func.dur(str) as Duration | null;
+        return this.utils.dur(str) as Duration | null;
     }
 
     /** Parse a raw textual value into a complex Dataview type, if possible. */
