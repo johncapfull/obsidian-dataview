@@ -32,6 +32,7 @@ import {
 import { DataviewInit } from "ui/markdown";
 import { inlinePlugin } from "./ui/lp-render";
 import { Extension } from "@codemirror/state";
+import { ImageGalleryChild } from "gallery/gallery";
 
 // ------
 // Кусок внутренностей для переименования ссылки
@@ -110,6 +111,12 @@ export default class DataviewPlugin extends Plugin {
         // SVG codeblocks
         this.registerPriorityCodeblockPostProcessor("svg", -100,
             async (source: string, el, ctx) => this.dataviewsvg(source, el, ctx, ctx.sourcePath));
+
+        // Image Gallery
+        this.registerPriorityCodeblockPostProcessor("gallery", -100, async (src, el, ctx) => {
+          const handler = new ImageGalleryChild(src, el, this.app);
+          ctx.addChild(handler);
+        });
 
         // Dataview inline queries.
         this.registerPriorityMarkdownPostProcessor(-100, async (el, ctx) => {

@@ -1,0 +1,1 @@
+Взято из https://github.com/lucaorio/obsidian-image-gallery/tree/main/src
