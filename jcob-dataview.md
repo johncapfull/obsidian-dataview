@@ -33,4 +33,4 @@ npm install culori
 npm i --save-dev @types/culori
 ```
 
-Доступно через `dv.culori.*`
+Доступно через `culori.*`
