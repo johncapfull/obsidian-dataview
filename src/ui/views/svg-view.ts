@@ -6,7 +6,7 @@ export class DataviewSvgRenderer extends DataviewRefreshableRenderer {
     static PREAMBLE: string = "const dataview = this;const dv = this;";
 
     constructor(public api: DataviewApi, public script: string, public container: HTMLElement, public origin: string) {
-        super(container, api.index, api.app, api.settings);
+        super(container, api.app, api.settings);
     }
 
     async render() {
