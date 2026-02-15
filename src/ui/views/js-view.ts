@@ -99,8 +99,14 @@ export class DataviewJSRenderer extends DataviewRefreshableRenderer {
             const line = this.line;
             const clickHandler = EditorView.domEventHandlers({
               click(event, view) {
+                let codeOffset = 0;
+                const pos = view.posAtCoords({ x: event.clientX, y: event.clientY });
+                if (pos !== null) {
+                  codeOffset = view.state.doc.lineAt(pos).number;
+                  console.log(`Clicked on line: ${codeOffset}`);
+                }
                 const editor = app.workspace.getActiveViewOfType(MarkdownView)?.editor;
-                editor?.setCursor(line);
+                editor?.setCursor(line + codeOffset);
                 editor?.focus();
                 return true
               }
