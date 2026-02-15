@@ -7,7 +7,6 @@ import { DataviewSettings } from "settings";
 import { Link, Literal, Values, Widgets } from "data-model/value";
 import { DateTime, Duration } from "luxon";
 import * as Luxon from "luxon";
-import { DataArray } from "./data-array";
 import * as culori from "culori";
 
 export class DataviewInlineApi {
@@ -70,21 +69,6 @@ export class DataviewInlineApi {
     /////////////
     // Utility //
     /////////////
-
-    /** Convert an input element or array into a Dataview data-array. If the input is already a data array, it is returned unchanged. */
-    public array(raw: any): DataArray<any> {
-        return this.api.array(raw);
-    }
-
-    /** Return true if the given value is a javascript array OR a dataview data array. */
-    public isArray(raw: any): raw is DataArray<any> | Array<any> {
-        return this.api.isArray(raw);
-    }
-
-    /** Return true if the given value is a dataview data array; this returns FALSE for plain JS arrays. */
-    public isDataArray(raw: unknown): raw is DataArray<any> {
-        return DataArray.isDataArray(raw);
-    }
 
     /** Create a dataview file link to the given path. */
     public fileLink(path: string, embed: boolean = false, display?: string): Link {

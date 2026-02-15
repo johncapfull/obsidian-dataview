@@ -3,7 +3,6 @@
 import { App, Component, MarkdownPostProcessorContext } from "obsidian";
 import { Link, Literal, Values, Widgets } from "data-model/value";
 import { renderCodeBlock, renderErrorPre, renderValue } from "ui/render";
-import { DataArray } from "./data-array";
 import { DateTime, Duration } from "luxon";
 import * as Luxon from "luxon";
 import { compare, CompareOperator, satisfies } from "compare-versions";
@@ -54,25 +53,6 @@ export class DataviewApi {
     // Utility //
     /////////////
 
-    /**
-     * Convert an input element or array into a Dataview data-array. If the input is already a data array,
-     * it is returned unchanged.
-     */
-    public array(raw: unknown): DataArray<any> {
-        if (DataArray.isDataArray(raw)) return raw;
-        if (Array.isArray(raw)) return DataArray.wrap(raw, this.settings);
-        return DataArray.wrap([raw], this.settings);
-    }
-
-    /** Return true if the given value is a javascript array OR a dataview data array. */
-    public isArray(raw: unknown): raw is DataArray<any> | Array<any> {
-        return DataArray.isDataArray(raw) || Array.isArray(raw);
-    }
-
-    /** Return true if the given value is a dataview data array; this returns FALSE for plain JS arrays. */
-    public isDataArray(raw: unknown): raw is DataArray<any> {
-        return DataArray.isDataArray(raw);
-    }
 
     /** Create a dataview file link to the given path. */
     public fileLink(path: string, embed: boolean = false, display?: string) {

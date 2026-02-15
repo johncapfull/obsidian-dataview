@@ -15,7 +15,6 @@ export type {
 } from "data-model/value";
 
 export type { Result, Success, Failure } from "api/result";
-export type { DataArray } from "api/data-array";
 
 ////////////////////
 // Implementation //

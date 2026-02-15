@@ -1,5 +1,4 @@
 import { App, Component, MarkdownRenderer } from "obsidian";
-import { DataArray } from "api/data-array";
 import { QuerySettings } from "settings";
 import { currentLocale } from "util/locale";
 import { renderMinimalDate, renderMinimalDuration } from "util/normalize";
@@ -147,7 +146,7 @@ export async function renderValue(
         }
     } else if (Values.isFunction(field)) {
         container.appendText("<function>");
-    } else if (Values.isArray(field) || DataArray.isDataArray(field)) {
+    } else if (Values.isArray(field)) {
         if (expandList) {
             let list = container.createEl("ul", {
                 cls: [
