@@ -48,14 +48,6 @@ export class DataviewInlineApi {
         this.shared = api.shared;
     }
 
-    ///////////////////////////////
-    // Dataview Query Evaluation //
-    ///////////////////////////////
-
-    /** Execute a DataviewJS query and embed it into the current view. */
-    public async executeJs(code: string) {
-        this.api.executeJs(code, this.container, this.component, this.currentFilePath);
-    }
 
     /////////////////////////
     // Console Functions   //

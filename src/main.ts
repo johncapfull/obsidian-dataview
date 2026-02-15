@@ -72,7 +72,7 @@ export default class DataviewPlugin extends Plugin {
         this.registerPriorityCodeblockPostProcessor(
             this.settings.dataviewJsKeyword,
             -100,
-            async (source: string, el, ctx) => this.dataviewjs(source, el, ctx, ctx.sourcePath)
+            async (source: string, el, ctx) => this.dataviewjs(source, el, ctx)
         );
 
         // SVG codeblocks
@@ -124,10 +124,6 @@ export default class DataviewPlugin extends Plugin {
             },
         });
 
-        // Not required anymore, though holding onto it for backwards-compatibility.
-        this.app.metadataCache.trigger("dataview:api-ready", this.api);
-        console.log(`Dataview: version ${this.manifest.version} (requires obsidian ${this.manifest.minAppVersion})`);
-
         this.registerDataviewjsCodeHighlighting();
         this.register(() => this.unregisterDataviewjsCodeHighlighting());
     }
@@ -169,14 +165,9 @@ export default class DataviewPlugin extends Plugin {
 
 
     /** Generate a DataviewJS view running the given source in the given element. */
-    public async dataviewjs(
-        source: string,
-        el: HTMLElement,
-        component: Component | MarkdownPostProcessorContext,
-        sourcePath: string
-    ) {
+    public async dataviewjs(source: string, el: HTMLElement, ctx: MarkdownPostProcessorContext) {
         el.style.overflowX = "auto";
-        this.api.executeJs(source, el, component, sourcePath);
+        this.api.executeJs(source, el, ctx, ctx.sourcePath);
     }
 
     public async dataviewsvg(

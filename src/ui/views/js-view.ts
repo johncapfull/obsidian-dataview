@@ -9,6 +9,7 @@ import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { javascript } from "@codemirror/lang-javascript"
 
 import { tags } from "@lezer/highlight"
+import { MarkdownView } from "obsidian";
 
 // Plugin to highlight all lines
 const highlightAllLinesPlugin = ViewPlugin.fromClass(class {
@@ -69,7 +70,7 @@ const cmHighlightStyle = HighlightStyle.define([
 
 export class DataviewJSRenderer extends DataviewRefreshableRenderer {
 
-    constructor(public api: DataviewApi, public script: string, public container: HTMLElement, public origin: string) {
+    constructor(public api: DataviewApi, public script: string, public container: HTMLElement, public filePath: string, public line: number) {
         super(container, api.app, api.settings);
     }
 
@@ -91,11 +92,28 @@ export class DataviewJSRenderer extends DataviewRefreshableRenderer {
             code.addClass("cm-s-obsidian");
             code.addClass("dataview-code-view");
 
+            //////////////////////////////////////////////////////////
+            // Пытаемся обработать клик чтобы тащил курсор в реальное поле
+
+            const app = this.app;
+            const line = this.line;
+            const clickHandler = EditorView.domEventHandlers({
+              click(event, view) {
+                const editor = app.workspace.getActiveViewOfType(MarkdownView)?.editor;
+                editor?.setCursor(line);
+                editor?.focus();
+                return true
+              }
+            })
+
+            /////////////////////////////////////////////////////////
+
             // @ts-ignore
             let editor = new EditorView({
                 parent: code,
                 doc: this.script,
                 extensions: [
+                  clickHandler,
                   javascript({typescript: true}),
                   syntaxHighlighting(cmHighlightStyle),     // defaultHighlightStyle classHighlighter
                   highlightAllLinesPlugin,
@@ -116,18 +134,15 @@ export class DataviewJSRenderer extends DataviewRefreshableRenderer {
             resultContainer.addClass("dataview-result-view");
             div.appendChild(resultContainer);
 
-            //const trace = d.trace.bind(d);
-            //const dataview = this;
-
-            // все в одну линию чтобы номера строк ошибок были
+            // все в одну линию чтобы номера строк ошибок не съехали
             const js = "" +
                 `const d = this;` +
                 `const shared = d.shared;` +
-                `["share", "trace", "el", "lerp_from_to", "clamp", "saturate"]` +
+                `["share", "trace", "dbg", "el", "div", "lerp_from_to", "clamp", "saturate"]` +
                 `.forEach(fn => { globalThis[fn] = d[fn].bind(d); });` +
                 `${this.script}`;
 
-            const api = new DataviewInlineApi(this.api, this, resultContainer, this.origin, outContainer);
+            const api = new DataviewInlineApi(this.api, this, resultContainer, this.filePath, outContainer);
             await asyncEvalInContext(js, api);
         } catch (e) {
             this.containerEl.innerHTML = "";

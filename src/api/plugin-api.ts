@@ -50,17 +50,21 @@ export class DataviewApi {
      */
     public async executeJs(
         code: string,
-        container: HTMLElement,
-        component: Component | MarkdownPostProcessorContext,
+        el: HTMLElement,
+        ctx: MarkdownPostProcessorContext,
         filePath: string
     ) {
         if (isDataviewDisabled(filePath)) {
-            renderCodeBlock(container, code, "javascript");
+            renderCodeBlock(el, code, "javascript");
             return;
         }
-        const renderer = new DataviewJSRenderer(this, code, container, filePath);
+
+        const info = ctx.getSectionInfo(el);
+        const line = info?.lineStart ?? 0;
+
+        const renderer = new DataviewJSRenderer(this, code, el, filePath, line);
         renderer.load();
-        component.addChild(renderer);
+        ctx.addChild(renderer);
     }
 
     public async executeSvg(
