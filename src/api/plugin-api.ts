@@ -1,25 +1,16 @@
 /** The general, externally accessible plugin API (available at `app.plugins.plugins.dataview.api` or as global `DataviewAPI`). */
 
 import { App, Component, MarkdownPostProcessorContext } from "obsidian";
-import { Link, Literal, Values, Widgets } from "data-model/value";
-import { renderCodeBlock, renderErrorPre, renderValue } from "ui/render";
-import { DateTime, Duration } from "luxon";
+import { renderCodeBlock, renderErrorPre } from "ui/render";
 import * as Luxon from "luxon";
 import { compare, CompareOperator, satisfies } from "compare-versions";
 import { DataviewSettings } from "settings";
 import { DataviewJSRenderer } from "ui/views/js-view";
 
-export type BoundFunctionImpl = (...args: Literal[]) => Literal;
 
 
 /** Global API for accessing the Dataview API, executing dataview queries, and  */
 export class DataviewApi {
-    /** Dataview functions which can be called from DataviewJS. */
-    public utils: Record<string, BoundFunctionImpl>;
-    /** Value utility functions for comparisons and type-checking. */
-    public value = Values;
-    /** Widget utility functions for creating built-in widgets. */
-    public widget = Widgets;
     /** Re-exporting of luxon for people who can't easily require it. Sorry! */
     public luxon = Luxon;
 
@@ -48,42 +39,6 @@ export class DataviewApi {
             satisfies: (range: string) => satisfies(this.verNum, range),
         };
     })();
-
-    /////////////
-    // Utility //
-    /////////////
-
-
-    /** Create a dataview file link to the given path. */
-    public fileLink(path: string, embed: boolean = false, display?: string) {
-        return Link.file(path, embed, display);
-    }
-
-    /** Create a dataview section link to the given path. */
-    public sectionLink(path: string, section: string, embed: boolean = false, display?: string): Link {
-        return Link.header(path, section, embed, display);
-    }
-
-    /** Create a dataview block link to the given path. */
-    public blockLink(path: string, blockId: string, embed: boolean = false, display?: string): Link {
-        return Link.block(path, blockId, embed, display);
-    }
-
-    /** Attempt to extract a date from a string, link or date. */
-    public date(pathlike: string | Link | DateTime): DateTime | null {
-        return this.utils.date(pathlike) as DateTime | null;
-    }
-
-    /** Attempt to extract a duration from a string or duration. */
-    public duration(str: string | Duration): Duration | null {
-        return this.utils.dur(str) as Duration | null;
-    }
-
-    /** Deep clone the given literal, returning a new literal which is independent of the original. */
-    public clone(value: Literal): Literal {
-        return Values.deepCopy(value);
-    }
-
 
     ///////////////
     // Rendering //
@@ -143,28 +98,7 @@ export class DataviewApi {
 
         //component.addChild(renderer);
     }
-
-    /** Render an arbitrary value into a container. */
-    public async renderValue(
-        value: any,
-        container: HTMLElement,
-        component: Component,
-        filePath: string,
-        inline: boolean = false
-    ) {
-        return renderValue(this.app, value as Literal, container, filePath, component, this.settings, inline);
-    }
 }
-
-/** The result of executing a calendar query. */
-export type CalendarResult = {
-    type: "calendar";
-    values: {
-        date: DateTime;
-        link: Link;
-        value?: Literal[];
-    }[];
-};
 
 /** Determines if source-path has a `?no-dataview` annotation that disables dataview. */
 export function isDataviewDisabled(sourcePath: string): boolean {

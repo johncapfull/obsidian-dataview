@@ -3,16 +3,6 @@ export type { DataviewApi } from "api/plugin-api";
 
 // Core Dataview types.
 export type { DateTime, Duration } from "luxon";
-export type {
-    Link,
-    DataObject,
-    LiteralType,
-    Literal,
-    LiteralRepr,
-    WrappedLiteral,
-    LiteralWrapper,
-    Widget,
-} from "data-model/value";
 
 export type { Result, Success, Failure } from "api/result";
 
